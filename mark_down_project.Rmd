@@ -1,0 +1,249 @@
+---
+title: "Project"
+author: "Ganti Uday"
+date: "2022-11-12"
+output: word_document
+---
+Data Source : 
+
+### Reading and cleaning Data
+
+```{r}
+rm(list=ls())
+library(rio)
+library(car)
+library(corrplot)
+library(dplyr)
+set.seed(123)
+data = import("credit.csv")
+colnames(data)=tolower(make.names(colnames(data)))
+attach(data)
+head(data)
+data = subset(data, select=-c(ethnicity,gender,student,education,cards,rating,age))
+data$married [data$married == "Yes"] = 1
+data$married [data$married == "No"] = 0
+data$married <- as.integer(data$married)
+str(data)
+```
+```{r}
+data %>% count(married)
+
+head(data)
+
+cor(data)
+```
+
+### Creating Sample Data
+
+```{r}
+sample_data = data[sample(1:nrow(data),100),]
+sample_data %>% count(married)
+
+
+attach(sample_data)
+
+plot(sample_data)
+
+```
+
+### Corelation between variables investigated
+
+```{r}
+
+cont=subset(sample_data, select=c("income","limit","balance"))
+
+corelated=round(cor(cont),3)
+
+round(cor(corelated),3)
+
+
+
+corrplot(corelated, method="ellipse")
+var = cont[,c("income","limit","balance")]
+plot(var, col='black', pch=19, 
+     main = 'Scatter Plot for continous variables')
+
+```
+
+
+### Linear Regression
+
+```{r}
+
+regout1=lm(limit~income,data = sample_data)
+summary(regout1)
+coefficients(regout1)
+
+```
+
+Inference:
+
+When we run the linear regression model for limit (dependent) with income as a independent variable we see a P value less than 5% and has significance in the model. We also notice a R-square value of 63%. There is no difference between r-square and R- adjected which means there is no over fitting problem. This model can be better. As the R-square value is 63% which means there is still 37% of  unexplained relationship in the dataset.Note: standard deviation is observed as 1357.
+
+```{r}
+regout2=lm(limit~married,data = sample_data)
+summary(regout2)
+coefficients(regout2)
+
+```
+
+Inference:
+
+When we run the linear regression model for limit (dependent) with married as a independent variable we see a P value less than 5%. But, we also notice a R-square value of 0.51% which means that this variable has no significance on the credit limit.Though, our p value is less than 5% R-sqaure value shows this model can be improved with other variables to get the best fit. 
+
+
+```{r}
+regout3=lm(limit~balance,data = sample_data)
+summary(regout3)
+coefficients(regout3)
+```
+
+Inference:
+
+When we run the linear regression model for limit (dependent) with balance as a independent variable we see a P value less than 5% and has significance in the model. We also notice a R-square value of 71%. There is no difference between r-square and R- adjected which means there is no over fitting problem. This model can be better. As the R-square value is 71% which means there is still 29% of  unexplained relationship in the dataset.Note: standard deviation is observed as 1199.
+
+# Multiple regression with 2 independent variables
+
+```{r}
+
+regout4=lm(limit~income+married,data = sample_data)
+summary(regout4)
+coefficients(regout4)
+```
+
+Inference:
+
+After understanding which variables are significant we run a multi-regression model for limit (dependent) with income and married as a independent variable. we notice a P value less than 5% for income (significance variable in the model) and married with bigger value indicating it has no affect on the credit limit. We also notice a R-square value of 63%. There is no difference between r-square and R- adjected which means there is no over fitting problem. This model has a scope for better improvement, as there is still 37% of unexplained relationship. 
+
+```{r}
+regout5=lm(limit~balance+married,data = sample_data)
+summary(regout5)
+coefficients(regout5)
+
+regout6=lm(limit~balance+income,data = sample_data)
+summary(regout6)
+coefficients(regout6)
+```
+
+
+# Main Multiple Regression with 3 independent variables
+
+```{r}
+
+regout7 = lm(limit ~ income + married + balance, data=sample_data)
+summary(regout7)
+coefficients(regout7)
+
+```
+
+Inference:
+
+After running regression model on two variables we got to know tht there is still room for improvement. so we ran a model with three  three  independent variables ( income, married and balance) we do notice that income and balance of a person is significant in the model with p-values less than 5%. R-square value is 93% which is a good fit. Overall income and balance of a person overrule the rest of the variables. we also notice this model is  comparatively  tigher with standard deviation of 563.
+ 
+But we still want to make more models to see its behaviour.
+
+
+# X1 * X2
+
+```{r}
+
+sample_data$incbal <- sample_data$income*sample_data$balance
+
+regout8 = lm(limit ~ income + balance + incbal, data=sample_data)
+summary(regout8)
+coefficients(regout8)
+
+```
+
+Inference:
+
+After adding variable incbal( multiplication of income and balance) we notice this variable is not significant (p-value> 5%)
+still gives a R-sqaure value of 93% and a standard deviation of 563.4.
+
+Let us run few more models.
+
+```{r}
+sample_data$income2 <- sample_data$income*sample_data$income
+sample_data$balance2 <- sample_data$balance*sample_data$balance
+
+# variables income + income ** 2 
+regout9=lm(limit~income+income2,data = sample_data)
+summary(regout9)
+coefficients(regout9)
+
+# variables balance +balance **2
+
+regout10=lm(limit~balance+balance2,data = sample_data)
+summary(regout10)
+coefficients(regout10)
+
+```
+
+Inference :
+
+After running a model with income+ income**2 as independent variables we still see income beening significant and R -square value of 63% which is less than our previous models. 
+Same with balance +balance square we see significance in balance but the variable balance square has no importance in the model.But the R-square value is 71% which is a good model fit. But we have already got a good model fit in the previous model.
+
+
+##### Model------regout7 = lm(limit ~ income + married + balance, data=sample_data) 
+is the best fit for the given data as it shows good R-sqare value of 93% invloves less variables and has less standard deviation compared to thde rest of the models
+
+
+# Linearity
+
+```{r}
+
+plot(sample_data$balance, regout7$fitted.values, pch=19, 
+     main = " Actual vs Fitted Values",xlab = 'Price', ylab = 'Fitted Values')
+```
+
+Inference :
+
+The data is linear in nature. There is a constant increase fitted values with increase in price.
+
+# Normality
+
+```{r}
+qqnorm(regout7$residuals,pch=19,main="Normality Plot of the Residuals")
+qqline(regout7$residuals,col='red',lwd=3)
+
+hist(regout7$residuals, col='red', probability = TRUE,main = 'Histogram to determine Normality',xlab = 'Residuals')
+```
+
+Inference :
+
+While the data might not appear normally distributed initially, the data is left skewed for the most part.
+
+# Equality of Variance
+
+
+```{r}
+
+#Equality of Variance
+plot(regout7$fitted.values,regout7$residuals,pch=19,
+     main="Residuals",xlab = 'Fitted Values', ylab = 'Residuals')
+abline(0,0,col="red",lwd=3)
+```
+
+Inference :
+
+Most of the observations fall inside the first 2 standard deviations.
+
+
+# Prediction 1
+```{r}
+
+dataone <- data.frame(married=factor("Yes", levels=c("Yes", "No")), balance=12, income=8)
+
+predict(limit_income_married_balance,dataone,interval="predict")
+predict(limit_income_married_balance,dataone,interval="confidence")
+```
+
+# Prediction2
+
+```{r}
+
+datatwo <- data.frame(married=factor("No", levels=c("Yes", "No")), balance=10, income=20)
+predict(limit_income_married_balance,datatwo,interval="predict")
+predict(limit_income_married_balance,datatwo,interval="confidence")
+```
